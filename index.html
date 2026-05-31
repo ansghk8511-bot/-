@@ -22,12 +22,10 @@
     enemy1Walks[0].src = 'enemy1_1.png'; enemy1Walks[1].src = 'enemy1_2.png'; enemy1Walks[2].src = 'enemy1_3.png';
     const enemy2Walks = [new Image(), new Image(), new Image()];
     enemy2Walks[0].src = 'enemy2_1.png'; enemy2Walks[1].src = 'enemy2_2.png'; enemy2Walks[2].src = 'enemy2_3.png';
-    // 최종 보스 이미지 로드
     const bossWalks = [new Image(), new Image(), new Image()];
     bossWalks[0].src = 'boss_1.png'; bossWalks[1].src = 'boss_2.png'; bossWalks[2].src = 'boss_3.png';
 
-    let isGameStarted = false, isGameOver = false;
-    let deathMessage = "";
+    let isGameStarted = false, isGameOver = false, deathMessage = "";
     const bullets = [], enemies = [], keys = {};
     let score = 0;
     const player = { x: canvas.width/2, y: canvas.height/2, size: 64, speed: 5, isMoving: false, frame: 0, dir: 1 };
@@ -35,12 +33,13 @@
     window.addEventListener('keydown', (e) => keys[e.code] = true);
     window.addEventListener('keyup', (e) => keys[e.code] = false);
 
+    // 무기 레벨 시스템
     function getWeaponStats() {
-        if (score >= 2000) return { speed: 30, pierce: true, size: 20, color: 'gold' };
-        if (score >= 1000) return { speed: 25, pierce: true, size: 15, color: 'purple' };
-        if (score >= 600)  return { speed: 20, pierce: true, size: 15, color: 'blue' };
-        if (score >= 300)  return { speed: 15, pierce: true, size: 10, color: 'red' };
-        if (score >= 100)  return { speed: 15, pierce: false, size: 10, color: 'yellow' };
+        if (score >= 20000) return { speed: 30, pierce: true, size: 20, color: 'gold' };
+        if (score >= 10000) return { speed: 25, pierce: true, size: 15, color: 'purple' };
+        if (score >= 6000)  return { speed: 20, pierce: true, size: 15, color: 'blue' };
+        if (score >= 3000)  return { speed: 15, pierce: true, size: 10, color: 'red' };
+        if (score >= 1000)  return { speed: 15, pierce: false, size: 10, color: 'yellow' };
         return { speed: 10, pierce: false, size: 10, color: 'white' };
     }
 
@@ -61,7 +60,7 @@
     function spawnEnemy() {
         if (!isGameOver) {
             if (score >= 100000 && !enemies.find(e => e.type === 3)) {
-                enemies.push({ x: canvas.width/2, y: -100, frame: 0, type: 3, hp: 50 });
+                enemies.push({ x: canvas.width/2, y: -100, frame: 0, type: 3, hp: 100 });
             } else if (score < 100000) {
                 let side = Math.floor(Math.random() * 4);
                 let x, y;
@@ -77,6 +76,7 @@
 
     function update() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
         if (!isGameStarted) {
             ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.font = '40px Arial';
             ctx.fillText("두 쫜득이들을 물리쳐라!", canvas.width/2, canvas.height/2 - 150);
@@ -89,7 +89,7 @@
             ctx.font = '50px Arial'; ctx.fillText("RETRY", canvas.width/2, canvas.height/2 + 20);
             ctx.strokeRect(canvas.width/2 - 110, canvas.height/2 - 50, 220, 100);
         } else {
-            let moveSpeed = (score >= 2000) ? 8 : 5;
+            let moveSpeed = (score >= 20000) ? 8 : 5;
             player.isMoving = (keys['ArrowLeft'] || keys['KeyA'] || keys['ArrowRight'] || keys['KeyD'] || keys['ArrowUp'] || keys['KeyW'] || keys['ArrowDown'] || keys['KeyS']);
             if (keys['ArrowLeft'] || keys['KeyA']) { player.x -= moveSpeed; player.dir = -1; }
             if (keys['ArrowRight'] || keys['KeyD']) { player.x += moveSpeed; player.dir = 1; }
@@ -124,9 +124,9 @@
                     if (Math.hypot(b.x - e.x, b.y - e.y) < (e.type === 3 ? 64 : 30)) {
                         if (e.type === 3) {
                             e.hp -= 1;
-                            if (e.hp <= 0) { enemies.splice(ei, 1); score += 5000; }
+                            if (e.hp <= 0) { enemies.splice(ei, 1); score += 50000; }
                         } else {
-                            enemies.splice(ei, 1); score += (e.type === 2 ? 50 : 10);
+                            enemies.splice(ei, 1); score += (e.type === 2 ? 500 : 100);
                         }
                         if (!b.pierce) bullets.splice(bi, 1);
                     }
@@ -134,7 +134,7 @@
             });
             ctx.fillStyle = 'white'; ctx.font = '20px Arial';
             ctx.fillText("Score: " + score, 20, 30);
-            ctx.fillText("Weapon Lv: " + (score >= 2000 ? 6 : score >= 1000 ? 5 : score >= 600 ? 4 : score >= 300 ? 3 : score >= 100 ? 2 : 1), 20, 60);
+            ctx.fillText("Lv: " + (score >= 20000 ? 6 : score >= 10000 ? 5 : score >= 6000 ? 4 : score >= 3000 ? 3 : score >= 1000 ? 2 : 1), 20, 60);
         }
         requestAnimationFrame(update);
     }
