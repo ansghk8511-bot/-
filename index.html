@@ -14,7 +14,6 @@
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // 이미지 로드
     const playerIdle = new Image(); playerIdle.src = 'player_idle.png';
     const playerWalks = [new Image(), new Image(), new Image()];
     playerWalks[0].src = 'player_walk_1.png'; playerWalks[1].src = 'player_walk_2.png'; playerWalks[2].src = 'player_walk_3.png';
@@ -33,7 +32,6 @@
     window.addEventListener('keydown', (e) => keys[e.code] = true);
     window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-    // 무기 레벨 시스템
     function getWeaponStats() {
         if (score >= 20000) return { speed: 30, pierce: true, size: 20, color: 'gold' };
         if (score >= 10000) return { speed: 25, pierce: true, size: 15, color: 'purple' };
@@ -62,15 +60,18 @@
             if (score >= 100000 && !enemies.find(e => e.type === 3)) {
                 enemies.push({ x: canvas.width/2, y: -100, frame: 0, type: 3, hp: 100 });
             } else if (score < 100000) {
-                let side = Math.floor(Math.random() * 4);
-                let x, y;
-                if (side === 0) { x = Math.random() * canvas.width; y = -50; }
-                else if (side === 1) { x = Math.random() * canvas.width; y = canvas.height + 50; }
-                else if (side === 2) { x = -50; y = Math.random() * canvas.height; }
-                else { x = canvas.width + 50; y = Math.random() * canvas.height; }
-                enemies.push({ x: x, y: y, frame: 0, type: Math.random() > 0.7 ? 2 : 1 });
+                let spawnCount = (score > 5000) ? 2 : 1; 
+                for (let i = 0; i < spawnCount; i++) {
+                    let side = Math.floor(Math.random() * 4);
+                    let x, y;
+                    if (side === 0) { x = Math.random() * canvas.width; y = -50; }
+                    else if (side === 1) { x = Math.random() * canvas.width; y = canvas.height + 50; }
+                    else if (side === 2) { x = -50; y = Math.random() * canvas.height; }
+                    else { x = canvas.width + 50; y = Math.random() * canvas.height; }
+                    enemies.push({ x: x, y: y, frame: 0, type: Math.random() > 0.7 ? 2 : 1 });
+                }
             }
-            setTimeout(spawnEnemy, Math.max(500, 2000 - (score / 1000)));
+            setTimeout(spawnEnemy, Math.max(300, 2000 - (score / 50)));
         }
     }
 
