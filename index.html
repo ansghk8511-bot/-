@@ -25,7 +25,7 @@
     bossWalks[0].src = 'boss_1.png'; bossWalks[1].src = 'boss_2.png'; bossWalks[2].src = 'boss_3.png';
 
     let isGameStarted = false, isGameOver = false, isGameCleared = false, deathMessage = "";
-    let lastBossScore = 0; // [추가] 마지막으로 보스가 소환된 점수 기록
+    let nextBossScore = 100000;
     const bullets = [], enemies = [], keys = {};
     let score = 0;
     const player = { x: 0, y: 0, size: 64, speed: 5, isMoving: false, frame: 0, dir: 1 };
@@ -43,7 +43,7 @@
     window.addEventListener('mousedown', (e) => {
         if (!isGameStarted || isGameOver || isGameCleared) {
             if (e.clientX > canvas.width/2 - 110 && e.clientX < canvas.width/2 + 110 && e.clientY > canvas.height/2 - 50 && e.clientY < canvas.height/2 + 50) {
-                isGameStarted = true; isGameOver = false; isGameCleared = false; score = 0; lastBossScore = 0; enemies.length = 0; bullets.length = 0;
+                isGameStarted = true; isGameOver = false; isGameCleared = false; score = 0; nextBossScore = 100000; enemies.length = 0; bullets.length = 0;
                 player.x = 0; player.y = 0; spawnEnemy();
             }
         } else if (!player.isMoving) {
@@ -55,13 +55,15 @@
 
     function spawnEnemy() {
         if (!isGameOver && !isGameCleared && isGameStarted) {
-            // [수정] 10만 점마다 보스 소환 (lastBossScore 활용)
-            if (score >= 100000 && (score - lastBossScore) >= 100000) {
-                enemies.push({ x: player.x + 800, y: player.y, frame: 0, type: 3, hp: 10000, maxHp: 10000 });
-                lastBossScore = Math.floor(score / 100000) * 100000;
+            // 보스 체력 2000 적용
+            if (score >= nextBossScore) {
+                enemies.push({ x: player.x + 800, y: player.y, frame: 0, type: 3, hp: 2000, maxHp: 2000 });
+                nextBossScore += 100000;
             }
-            let angle = Math.random() * Math.PI * 2;
-            enemies.push({ x: player.x + Math.cos(angle) * 800, y: player.y + Math.sin(angle) * 800, frame: 0, type: Math.random() > 0.7 ? 2 : 1 });
+            if (Math.random() > 0.2) {
+                let angle = Math.random() * Math.PI * 2;
+                enemies.push({ x: player.x + Math.cos(angle) * 800, y: player.y + Math.sin(angle) * 800, frame: 0, type: Math.random() > 0.7 ? 2 : 1 });
+            }
             setTimeout(spawnEnemy, Math.max(300, 2000 - (score / 1000)));
         }
     }
@@ -96,7 +98,6 @@
                 let size = (e.type === 3) ? 128 : 64;
                 let img = (e.type === 3) ? bossWalks[Math.floor(e.frame)%3] : (e.type === 2 ? enemy2Walks[Math.floor(e.frame)%3] : enemy1Walks[Math.floor(e.frame)%3]);
                 ctx.drawImage(img, e.x - camX - size/2, e.y - camY - size/2, size, size);
-
                 if (e.type === 3) {
                     ctx.fillStyle = 'red'; ctx.fillRect(e.x - camX - 50, e.y - camY - 80, 100, 10);
                     ctx.fillStyle = 'lime'; ctx.fillRect(e.x - camX - 50, e.y - camY - 80, (e.hp / e.maxHp) * 100, 10);
