@@ -14,7 +14,7 @@
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // 1. 이미지 로드 (전부 복구)
+    // 이미지 로드
     const playerIdle = new Image(); playerIdle.src = 'player_idle.png';
     const playerWalks = [new Image(), new Image(), new Image()];
     playerWalks[0].src = 'player_walk_1.png'; playerWalks[1].src = 'player_walk_2.png'; playerWalks[2].src = 'player_walk_3.png';
@@ -25,7 +25,6 @@
     const bossWalks = [new Image(), new Image(), new Image()];
     bossWalks[0].src = 'boss_1.png'; bossWalks[1].src = 'boss_2.png'; bossWalks[2].src = 'boss_3.png';
 
-    // 2. 게임 변수
     let isGameStarted = false, isGameOver = false, deathMessage = "";
     const bullets = [], enemies = [], keys = {};
     let score = 0;
@@ -34,7 +33,6 @@
     window.addEventListener('keydown', (e) => keys[e.code] = true);
     window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-    // 3. 무기 및 레벨 시스템
     function getWeaponStats() {
         if (score >= 20000) return { speed: 30, pierce: true, size: 20, color: 'gold' };
         if (score >= 10000) return { speed: 25, pierce: true, size: 15, color: 'purple' };
@@ -44,7 +42,6 @@
         return { speed: 10, pierce: false, size: 10, color: 'white' };
     }
 
-    // 4. 입력 처리
     window.addEventListener('mousedown', (e) => {
         if (!isGameStarted || isGameOver) {
             if (e.clientX > canvas.width/2 - 110 && e.clientX < canvas.width/2 + 110 &&
@@ -59,11 +56,11 @@
         }
     });
 
-    // 5. 적 스폰 (먹물 쫜득볼 포함)
     function spawnEnemy() {
         if (!isGameOver && isGameStarted) {
+            // 보스 체력을 2000으로 크게 상향
             if (score >= 100000 && !enemies.find(e => e.type === 3)) {
-                enemies.push({ x: player.x + 800, y: player.y, frame: 0, type: 3, hp: 100 });
+                enemies.push({ x: player.x + 800, y: player.y, frame: 0, type: 3, hp: 2000, maxHp: 2000 });
             } else {
                 let angle = Math.random() * Math.PI * 2;
                 enemies.push({ x: player.x + Math.cos(angle) * 800, y: player.y + Math.sin(angle) * 800, frame: 0, type: Math.random() > 0.7 ? 2 : 1 });
@@ -72,7 +69,6 @@
         }
     }
 
-    // 6. 업데이트 및 렌더링
     function update() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
@@ -84,7 +80,6 @@
             let camX = player.x - canvas.width/2;
             let camY = player.y - canvas.height/2;
 
-            // 이동
             let moveSpeed = (score >= 20000) ? 8 : 5;
             player.isMoving = (keys['ArrowLeft'] || keys['KeyA'] || keys['ArrowRight'] || keys['KeyD'] || keys['ArrowUp'] || keys['KeyW'] || keys['ArrowDown'] || keys['KeyS']);
             if (keys['ArrowLeft'] || keys['KeyA']) { player.x -= moveSpeed; player.dir = -1; }
@@ -92,13 +87,10 @@
             if (keys['ArrowUp'] || keys['KeyW']) player.y -= moveSpeed;
             if (keys['ArrowDown'] || keys['KeyS']) player.y += moveSpeed;
 
-            // 플레이어 그리기
             player.frame += 0.1; ctx.save(); ctx.translate(canvas.width/2, canvas.height/2);
             if (player.dir === -1) ctx.scale(-1, 1);
-            ctx.drawImage(player.isMoving ? playerWalks[Math.floor(player.frame) % 3] : playerIdle, -32, -32, 64, 64);
-            ctx.restore();
+            ctx.drawImage(player.isMoving ? playerWalks[Math.floor(player.frame) % 3] : playerIdle, -32, -32, 64, 64); ctx.restore();
 
-            // 적 그리기
             enemies.forEach((e, ei) => {
                 e.frame += 0.08;
                 const angle = Math.atan2(player.y - e.y, player.x - e.x);
@@ -109,26 +101,32 @@
                 let imgs = (e.type === 3) ? bossWalks : (e.type === 2 ? enemy2Walks : enemy1Walks);
                 ctx.drawImage(imgs[Math.floor(e.frame) % 3], e.x - camX - size/2, e.y - camY - size/2, size, size);
                 
+                // 보스 체력바 표시
+                if (e.type === 3) {
+                    ctx.fillStyle = 'red'; ctx.fillRect(e.x - camX - 50, e.y - camY - 80, 100, 10);
+                    ctx.fillStyle = 'lime'; ctx.fillRect(e.x - camX - 50, e.y - camY - 80, (e.hp / e.maxHp) * 100, 10);
+                }
+                
                 if (Math.hypot(player.x - e.x, player.y - e.y) < size/2) {
                     isGameOver = true;
                     deathMessage = (e.type === 3) ? "최종 보스에게 당했다!" : (e.type === 2 ? "먹물 쫜득볼한테 당했다!" : "두쫜득볼한테 당했다!");
                 }
             });
 
-            // 총알 그리기
             bullets.forEach((b, bi) => {
                 b.x += b.dx; b.y += b.dy;
                 ctx.fillStyle = b.color; ctx.fillRect(b.x - camX, b.y - camY, b.size, b.size);
                 enemies.forEach((e, ei) => {
                     if (Math.hypot(b.x - e.x, b.y - e.y) < (e.type === 3 ? 64 : 30)) {
-                        if (e.type === 3) { e.hp -= 1; if (e.hp <= 0) { enemies.splice(ei, 1); score += 50000; } }
-                        else { enemies.splice(ei, 1); score += (e.type === 2 ? 500 : 100); }
+                        if (e.type === 3) {
+                            e.hp -= 1;
+                            if (e.hp <= 0) { enemies.splice(ei, 1); score += 50000; }
+                        } else { enemies.splice(ei, 1); score += (e.type === 2 ? 500 : 100); }
                         if (!b.pierce) bullets.splice(bi, 1);
                     }
                 });
             });
 
-            // UI
             ctx.fillStyle = 'white'; ctx.font = '20px Arial';
             ctx.fillText("Score: " + score, 20, 30);
             ctx.fillText("Lv: " + (score >= 20000 ? 6 : score >= 10000 ? 5 : score >= 6000 ? 4 : score >= 3000 ? 3 : score >= 1000 ? 2 : 1), 20, 60);
