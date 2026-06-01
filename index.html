@@ -14,7 +14,6 @@
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // 이미지 로드 (필요시 경로 수정)
     const playerIdle = new Image(); playerIdle.src = 'player_idle.png';
     const playerWalks = [new Image(), new Image(), new Image()];
     playerWalks[0].src = 'player_walk_1.png'; playerWalks[1].src = 'player_walk_2.png'; playerWalks[2].src = 'player_walk_3.png';
@@ -33,15 +32,17 @@
     window.addEventListener('keydown', (e) => keys[e.code] = true);
     window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-    // 레벨업 성능 계산 함수
     function getWeaponStats() {
         let level = Math.min(Math.floor(score / 5000) + 1, 30);
+        const colors = ['white', 'cyan', 'lime', 'yellow', 'orange', 'red', 'magenta', 'gold'];
+        let colorIndex = Math.min(Math.floor(level / 4), colors.length - 1);
+        
         return {
-            speed: 10 + (level * 2), // 속도 증가
-            pierce: level >= 5,      // 5레벨부터 관통
-            size: 10 + (level * 1.5),// 크기 증가
-            color: level > 25 ? 'gold' : (level > 15 ? 'purple' : (level > 5 ? 'blue' : 'white')),
-            damage: Math.floor(1 + (level / 2))
+            speed: 12 + (level * 0.6), // 레벨업마다 속도가 점진적으로 증가
+            pierce: level >= 5,
+            size: 10 + (level * 1.5),
+            color: colors[colorIndex],
+            damage: 1 + Math.floor(level / 2)
         };
     }
 
@@ -53,7 +54,6 @@
                 player.x = 0; player.y = 0; spawnEnemy();
             }
         } else if (!player.isMoving) {
-            // [중요] 클릭하는 바로 그 순간 레벨 정보를 다시 조회하여 최신 상태의 총알을 생성함
             const stats = getWeaponStats();
             const angle = Math.atan2(e.clientY - canvas.height/2, e.clientX - canvas.width/2);
             bullets.push({ 
@@ -81,7 +81,6 @@
 
     function update() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
         if (!isGameStarted || isGameOver) {
             ctx.fillStyle = 'white'; ctx.textAlign = 'center';
             ctx.font = '50px Arial'; ctx.fillText(isGameOver ? deathMessage : "START", canvas.width/2, canvas.height/2 + 20);
@@ -107,31 +106,24 @@
                 const angle = Math.atan2(player.y - e.y, player.x - e.x);
                 let speed = (e.type === 3) ? 0.3 : (e.type === 2 ? 0.7 : 1.2);
                 e.x += Math.cos(angle) * speed; e.y += Math.sin(angle) * speed;
-                
                 let size = (e.type === 3) ? 128 : 64;
                 let imgs = (e.type === 3) ? bossWalks : (e.type === 2 ? enemy2Walks : enemy1Walks);
                 ctx.drawImage(imgs[Math.floor(e.frame) % 3], e.x - camX - size/2, e.y - camY - size/2, size, size);
-                
                 if (e.type === 3) {
                     ctx.fillStyle = 'red'; ctx.fillRect(e.x - camX - 50, e.y - camY - 80, 100, 10);
                     ctx.fillStyle = 'lime'; ctx.fillRect(e.x - camX - 50, e.y - camY - 80, (e.hp / e.maxHp) * 100, 10);
                 }
-                if (Math.hypot(player.x - e.x, player.y - e.y) < size/2) {
-                    isGameOver = true; deathMessage = "당했다!";
-                }
+                if (Math.hypot(player.x - e.x, player.y - e.y) < size/2) { isGameOver = true; deathMessage = "당했다!"; }
             });
 
             bullets.forEach((b, bi) => {
                 b.x += b.dx; b.y += b.dy;
-                ctx.fillStyle = b.color; ctx.fillRect(b.x - camX, b.y - camY, b.size, b.size);
+                ctx.fillStyle = b.color;
+                ctx.fillRect(b.x - camX, b.y - camY, b.size, b.size);
                 enemies.forEach((e, ei) => {
                     if (Math.hypot(b.x - e.x, b.y - e.y) < (e.type === 3 ? 64 : 30)) {
-                        if (e.type === 3) { 
-                            e.hp -= b.damage; score += (b.damage * 2); 
-                            if (e.hp <= 0) { enemies.splice(ei, 1); score += 100000; } 
-                        } else { 
-                            enemies.splice(ei, 1); score += (e.type === 2 ? 1000 : 500); 
-                        }
+                        if (e.type === 3) { e.hp -= b.damage; score += (b.damage * 2); if (e.hp <= 0) { enemies.splice(ei, 1); score += 100000; } }
+                        else { enemies.splice(ei, 1); score += (e.type === 2 ? 1000 : 500); }
                         if (!b.pierce) bullets.splice(bi, 1);
                     }
                 });
