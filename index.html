@@ -33,14 +33,15 @@
     window.addEventListener('keydown', (e) => keys[e.code] = true);
     window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-    // 30단계 업그레이드 시스템
+    // 레벨별 무기 성능 강화 시스템
     function getWeaponStats() {
         let level = Math.min(Math.floor(score / 5000) + 1, 30);
         return {
             speed: 10 + (level * 2),
-            pierce: level >= 5,
+            pierce: level >= 5, // 5레벨부터 관통
             size: 10 + (level * 1.5),
-            color: level > 25 ? 'gold' : (level > 15 ? 'purple' : (level > 5 ? 'blue' : 'white'))
+            color: level > 25 ? 'gold' : (level > 15 ? 'purple' : (level > 5 ? 'blue' : 'white')),
+            damage: Math.floor(1 + (level / 2)) // 레벨 비례 대미지 증가
         };
     }
 
@@ -54,13 +55,17 @@
         } else if (!player.isMoving) {
             let stats = getWeaponStats();
             const angle = Math.atan2(e.clientY - canvas.height/2, e.clientX - canvas.width/2);
-            bullets.push({ x: player.x, y: player.y, dx: Math.cos(angle) * stats.speed, dy: Math.sin(angle) * stats.speed, pierce: stats.pierce, size: stats.size, color: stats.color });
+            bullets.push({ 
+                x: player.x, y: player.y, 
+                dx: Math.cos(angle) * stats.speed, dy: Math.sin(angle) * stats.speed, 
+                pierce: stats.pierce, size: stats.size, color: stats.color, damage: stats.damage 
+            });
         }
     });
 
     function spawnEnemy() {
         if (!isGameOver && isGameStarted) {
-            // 보스 등장 조건 1,000,000점, 체력 10,000
+            // 보스 등장 100만 점, 체력 10,000
             if (score >= 1000000 && !enemies.some(e => e.type === 3)) {
                 enemies.push({ x: player.x + 800, y: player.y, frame: 0, type: 3, hp: 10000, maxHp: 10000 });
             }
@@ -118,7 +123,8 @@
                 enemies.forEach((e, ei) => {
                     if (Math.hypot(b.x - e.x, b.y - e.y) < (e.type === 3 ? 64 : 30)) {
                         if (e.type === 3) { 
-                            e.hp -= 1; score += 20; 
+                            e.hp -= b.damage; 
+                            score += (b.damage * 2); 
                             if (e.hp <= 0) { enemies.splice(ei, 1); score += 100000; } 
                         } else { 
                             enemies.splice(ei, 1); score += (e.type === 2 ? 1000 : 500); 
