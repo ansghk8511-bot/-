@@ -14,14 +14,11 @@
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // 이미지 로드
     const playerIdle = new Image(); playerIdle.src = 'player_idle.png';
     const playerWalks = [new Image(), new Image(), new Image()];
     playerWalks[0].src = 'player_walk_1.png'; playerWalks[1].src = 'player_walk_2.png'; playerWalks[2].src = 'player_walk_3.png';
     const enemy1Walks = [new Image(), new Image(), new Image()];
-    enemy1Walks[0].src = 'enemy1_1.png'; enemy1Walks[1].src = 'enemy1_2.png'; enemy1Walks[2].src = 'enemy1_3.png';
     const enemy2Walks = [new Image(), new Image(), new Image()];
-    enemy2Walks[0].src = 'enemy2_1.png'; enemy2Walks[1].src = 'enemy2_2.png'; enemy2Walks[2].src = 'enemy2_3.png';
     const bossWalks = [new Image(), new Image(), new Image()];
     bossWalks[0].src = 'boss_1.png'; bossWalks[1].src = 'boss_2.png'; bossWalks[2].src = 'boss_3.png';
 
@@ -33,8 +30,8 @@
     window.addEventListener('keydown', (e) => keys[e.code] = true);
     window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-    // 30단계 업그레이드 시스템
     function getWeaponStats() {
+        // 테스트를 위해 레벨을 고정하거나 빠르게 올리고 싶다면 여기서 조정 가능
         let level = Math.min(Math.floor(score / 5000) + 1, 30);
         return {
             speed: 10 + (level * 1.5),
@@ -60,14 +57,11 @@
 
     function spawnEnemy() {
         if (!isGameOver && isGameStarted) {
-            // 보스 스폰 (10만점부터)
-            if (score >= 100000 && !enemies.some(e => e.type === 3)) {
-                enemies.push({ x: player.x + 800, y: player.y, frame: 0, type: 3, hp: 2000, maxHp: 2000 });
+            // [테스트 모드] 오직 보스만 소환
+            if (!enemies.some(e => e.type === 3)) {
+                enemies.push({ x: player.x + 600, y: player.y, frame: 0, type: 3, hp: 2000, maxHp: 2000 });
             }
-            // 일반 적 스폰
-            let angle = Math.random() * Math.PI * 2;
-            enemies.push({ x: player.x + Math.cos(angle) * 800, y: player.y + Math.sin(angle) * 800, frame: 0, type: Math.random() > 0.7 ? 2 : 1 });
-            setTimeout(spawnEnemy, Math.max(300, 2000 - (score / 100)));
+            setTimeout(spawnEnemy, 1000);
         }
     }
 
@@ -76,56 +70,43 @@
         
         if (!isGameStarted || isGameOver) {
             ctx.fillStyle = 'white'; ctx.textAlign = 'center';
-            ctx.font = '50px Arial'; ctx.fillText(isGameOver ? deathMessage : "START", canvas.width/2, canvas.height/2 + 20);
+            ctx.font = '50px Arial'; ctx.fillText(isGameOver ? "GAME OVER" : "BOSS TEST MODE", canvas.width/2, canvas.height/2 + 20);
             ctx.strokeRect(canvas.width/2 - 110, canvas.height/2 - 50, 220, 100);
         } else {
             let camX = player.x - canvas.width/2;
             let camY = player.y - canvas.height/2;
 
-            // 이동
-            let moveSpeed = Math.min(5 + (score / 20000), 10);
+            let moveSpeed = 5;
             player.isMoving = (keys['ArrowLeft'] || keys['KeyA'] || keys['ArrowRight'] || keys['KeyD'] || keys['ArrowUp'] || keys['KeyW'] || keys['ArrowDown'] || keys['KeyS']);
             if (keys['ArrowLeft'] || keys['KeyA']) { player.x -= moveSpeed; player.dir = -1; }
             if (keys['ArrowRight'] || keys['KeyD']) { player.x += moveSpeed; player.dir = 1; }
             if (keys['ArrowUp'] || keys['KeyW']) player.y -= moveSpeed;
             if (keys['ArrowDown'] || keys['KeyS']) player.y += moveSpeed;
 
-            // 플레이어 그리기
             player.frame += 0.1; ctx.save(); ctx.translate(canvas.width/2, canvas.height/2);
             if (player.dir === -1) ctx.scale(-1, 1);
-            ctx.drawImage(player.isMoving ? playerWalks[Math.floor(player.frame) % 3] : playerIdle, -32, -32, 64, 64);
-            ctx.restore();
+            ctx.drawImage(player.isMoving ? playerWalks[Math.floor(player.frame) % 3] : playerIdle, -32, -32, 64, 64); ctx.restore();
 
-            // 적 그리기
             enemies.forEach((e, ei) => {
                 e.frame += 0.08;
                 const angle = Math.atan2(player.y - e.y, player.x - e.x);
-                let speed = (e.type === 3) ? 0.5 : (e.type === 2 ? 0.8 : 1.5);
-                e.x += Math.cos(angle) * speed; e.y += Math.sin(angle) * speed;
+                e.x += Math.cos(angle) * 0.5; e.y += Math.sin(angle) * 0.5;
                 
-                let size = (e.type === 3) ? 128 : 64;
-                let imgs = (e.type === 3) ? bossWalks : (e.type === 2 ? enemy2Walks : enemy1Walks);
-                ctx.drawImage(imgs[Math.floor(e.frame) % 3], e.x - camX - size/2, e.y - camY - size/2, size, size);
+                ctx.drawImage(bossWalks[Math.floor(e.frame) % 3], e.x - camX - 64, e.y - camY - 64, 128, 128);
                 
-                // 보스 체력바
-                if (e.type === 3) {
-                    ctx.fillStyle = 'red'; ctx.fillRect(e.x - camX - 50, e.y - camY - 80, 100, 10);
-                    ctx.fillStyle = 'lime'; ctx.fillRect(e.x - camX - 50, e.y - camY - 80, (e.hp / e.maxHp) * 100, 10);
-                }
+                ctx.fillStyle = 'red'; ctx.fillRect(e.x - camX - 50, e.y - camY - 100, 100, 10);
+                ctx.fillStyle = 'lime'; ctx.fillRect(e.x - camX - 50, e.y - camY - 100, (e.hp / e.maxHp) * 100, 10);
                 
-                if (Math.hypot(player.x - e.x, player.y - e.y) < size/2) {
-                    isGameOver = true; deathMessage = "당했다!";
-                }
+                if (Math.hypot(player.x - e.x, player.y - e.y) < 64) isGameOver = true;
             });
 
-            // 총알 그리기
             bullets.forEach((b, bi) => {
                 b.x += b.dx; b.y += b.dy;
                 ctx.fillStyle = b.color; ctx.fillRect(b.x - camX, b.y - camY, b.size, b.size);
                 enemies.forEach((e, ei) => {
-                    if (Math.hypot(b.x - e.x, b.y - e.y) < (e.type === 3 ? 64 : 30)) {
-                        if (e.type === 3) { e.hp -= 1; if (e.hp <= 0) { enemies.splice(ei, 1); score += 50000; } }
-                        else { enemies.splice(ei, 1); score += (e.type === 2 ? 500 : 100); }
+                    if (Math.hypot(b.x - e.x, b.y - e.y) < 64) {
+                        e.hp -= 1;
+                        if (e.hp <= 0) { enemies.splice(ei, 1); score += 50000; }
                         if (!b.pierce) bullets.splice(bi, 1);
                     }
                 });
@@ -133,7 +114,6 @@
 
             ctx.fillStyle = 'white'; ctx.font = '20px Arial';
             ctx.fillText("Score: " + score, 20, 30);
-            ctx.fillText("Lv: " + Math.min(Math.floor(score / 5000) + 1, 30), 20, 60);
         }
         requestAnimationFrame(update);
     }
