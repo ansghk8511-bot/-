@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>쫜득이를 물리쳐라! - 최종 버전</title>
+    <title>쫜득이를 물리쳐라!(두쫜득) - 최종 완성본</title>
     <style>
         body { margin: 0; background: #1a1a1a; overflow: hidden; }
         canvas { display: block; }
@@ -16,7 +16,7 @@
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // 이미지 로드
+    // 1. 이미지 로드
     const playerIdle = new Image(); playerIdle.src = 'player_idle.png';
     const playerWalks = [new Image(), new Image(), new Image()];
     playerWalks[0].src = 'player_walk_1.png'; playerWalks[1].src = 'player_walk_2.png'; playerWalks[2].src = 'player_walk_3.png';
@@ -27,12 +27,13 @@
     const bossWalks = [new Image(), new Image(), new Image()];
     bossWalks[0].src = 'boss_1.png'; bossWalks[1].src = 'boss_2.png'; bossWalks[2].src = 'boss_3.png';
 
-    // 게임 상태 변수
+    // 2. 게임 변수
     let isGameStarted = false, isGameOver = false, isGameCleared = false;
     let nextBossScore = 100000, score = 0, finalBossSpawned = false;
     let player = { x: 0, y: 0, frame: 0, dir: 1, level: 1, exp: 0, speed: 5, damage: 10, bulletSpeed: 15 };
     const bullets = [], enemies = [], keys = {};
 
+    // 3. 입력 이벤트
     window.addEventListener('keydown', (e) => keys[e.code] = true);
     window.addEventListener('keyup', (e) => keys[e.code] = false);
 
@@ -44,8 +45,8 @@
         }
     });
 
+    // 4. 레벨업 및 보스 로직
     function levelUpProcess(isBoss) {
-        // 보스는 10만, 일반 몬스터는 200 경험치 획득
         player.exp += isBoss ? 100000 : 200;
         if (player.level < 50 && player.exp >= player.level * 2000) {
             player.level++;
@@ -72,6 +73,7 @@
         setTimeout(spawnEnemy, Math.max(300, 2000 - (score / 2000)));
     }
 
+    // 5. 메인 루프
     function update() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (!isGameStarted || isGameOver || isGameCleared) {
@@ -118,7 +120,9 @@
                 }
             }
             bullets.forEach(b => { b.x += b.dx; b.y += b.dy; ctx.fillStyle = 'yellow'; ctx.fillRect(b.x - camX, b.y - camY, 10, 10); });
-            ctx.fillStyle = 'white'; ctx.fillText(`Score: ${score} | Level: ${player.level} | Bullet Speed: ${player.bulletSpeed}`, 50, 50);
+            
+            ctx.fillStyle = 'white'; ctx.font = '20px Arial'; ctx.textAlign = 'left'; 
+            ctx.fillText(`Score: ${score} | Level: ${player.level} | Bullet Speed: ${player.bulletSpeed}`, 20, 40);
         }
         requestAnimationFrame(update);
     }
