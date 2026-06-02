@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
+    <meta charset="UTF-8">
+    <title>쫜득이를 물리쳐라!</title>
     <style>
         body { margin: 0; background: #1a1a1a; overflow: hidden; }
         canvas { display: block; }
@@ -14,6 +16,7 @@
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
+    // 이미지 파일 로드 (같은 경로에 파일 필요)
     const playerIdle = new Image(); playerIdle.src = 'player_idle.png';
     const playerWalks = [new Image(), new Image(), new Image()];
     playerWalks[0].src = 'player_walk_1.png'; playerWalks[1].src = 'player_walk_2.png'; playerWalks[2].src = 'player_walk_3.png';
@@ -24,104 +27,89 @@
     const bossWalks = [new Image(), new Image(), new Image()];
     bossWalks[0].src = 'boss_1.png'; bossWalks[1].src = 'boss_2.png'; bossWalks[2].src = 'boss_3.png';
 
-    let isGameStarted = false, isGameOver = false, isGameCleared = false, deathMessage = "";
-    let nextBossScore = 100000;
+    let isGameStarted = false, isGameOver = false, isGameCleared = false;
+    let nextBossScore = 100000, score = 0, finalBossSpawned = false;
     const bullets = [], enemies = [], keys = {};
-    let score = 0;
-    const player = { x: 0, y: 0, size: 64, speed: 5, isMoving: false, frame: 0, dir: 1 };
+    
+    // 플레이어 정보 (레벨업 포함)
+    let player = { x: 0, y: 0, frame: 0, dir: 1, isMoving: false, level: 1, exp: 0, speed: 5, damage: 10, bulletSpeed: 15 };
 
     window.addEventListener('keydown', (e) => keys[e.code] = true);
     window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-    function getWeaponStats() {
-        let level = Math.min(Math.floor(score / 5000) + 1, 30);
-        const colors = ['white', 'cyan', 'lime', 'yellow', 'orange', 'red', 'magenta', 'gold'];
-        let colorIndex = Math.min(Math.floor(level / 4), colors.length - 1);
-        return { speed: 12 + (level * 0.6), pierce: level >= 5, size: 10 + (level * 1.5), color: colors[colorIndex], damage: 1 + Math.floor(level / 2) };
-    }
-
     window.addEventListener('mousedown', (e) => {
-        if (!isGameStarted || isGameOver || isGameCleared) {
-            if (e.clientX > canvas.width/2 - 110 && e.clientX < canvas.width/2 + 110 && e.clientY > canvas.height/2 - 50 && e.clientY < canvas.height/2 + 50) {
-                isGameStarted = true; isGameOver = false; isGameCleared = false; score = 0; nextBossScore = 100000; enemies.length = 0; bullets.length = 0;
-                player.x = 0; player.y = 0; spawnEnemy();
-            }
-        } else if (!player.isMoving) {
-            const stats = getWeaponStats();
+        if (!isGameStarted) { isGameStarted = true; spawnEnemy(); }
+        else if (!isGameOver && !isGameCleared) {
             const angle = Math.atan2(e.clientY - canvas.height/2, e.clientX - canvas.width/2);
-            bullets.push({ x: player.x, y: player.y, dx: Math.cos(angle) * stats.speed, dy: Math.sin(angle) * stats.speed, pierce: stats.pierce, size: stats.size, color: stats.color, damage: stats.damage });
+            bullets.push({ x: player.x, y: player.y, dx: Math.cos(angle) * player.bulletSpeed, dy: Math.sin(angle) * player.bulletSpeed, size: 10, damage: player.damage });
         }
     });
 
-    function spawnEnemy() {
-        if (!isGameOver && !isGameCleared && isGameStarted) {
-            // 보스 체력 2000 적용
-            if (score >= nextBossScore) {
-                enemies.push({ x: player.x + 800, y: player.y, frame: 0, type: 3, hp: 2000, maxHp: 2000 });
-                nextBossScore += 100000;
-            }
-            if (Math.random() > 0.2) {
-                let angle = Math.random() * Math.PI * 2;
-                enemies.push({ x: player.x + Math.cos(angle) * 800, y: player.y + Math.sin(angle) * 800, frame: 0, type: Math.random() > 0.7 ? 2 : 1 });
-            }
-            setTimeout(spawnEnemy, Math.max(300, 2000 - (score / 1000)));
+    function checkLevelUp() {
+        if (player.level < 50 && player.exp >= player.level * 2000) {
+            player.level++;
+            player.speed += 0.2;
+            player.damage += 2;
+            player.bulletSpeed += 1;
         }
+    }
+
+    function spawnEnemy() {
+        if (isGameOver || isGameCleared || !isGameStarted) return;
+        if (score >= 1000000 && !finalBossSpawned) {
+            enemies.push({ x: player.x + 600, y: player.y, type: 4, hp: 100000, maxHp: 100000, frame: 0 });
+            finalBossSpawned = true;
+        } else if (score < 1000000) {
+            if (score >= nextBossScore) {
+                enemies.push({ x: player.x + 600, y: player.y, type: 3, hp: 2000, maxHp: 2000, frame: 0 });
+                nextBossScore += 100000;
+            } else {
+                let angle = Math.random() * Math.PI * 2;
+                enemies.push({ x: player.x + Math.cos(angle) * 800, y: player.y + Math.sin(angle) * 800, type: Math.random() > 0.7 ? 2 : 1, frame: 0 });
+            }
+        }
+        setTimeout(spawnEnemy, Math.max(300, 2000 - (score / 2000)));
     }
 
     function update() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (!isGameStarted || isGameOver || isGameCleared) {
             ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.font = '40px Arial';
-            ctx.fillText(isGameCleared ? "만원을 획득하였습니다! 게임 클리어!" : (isGameOver ? deathMessage : "START"), canvas.width/2, canvas.height/2 + 20);
-            ctx.strokeRect(canvas.width/2 - 300, canvas.height/2 - 50, 600, 100);
+            ctx.fillText(isGameCleared ? "게임 클리어!" : (isGameOver ? "GAME OVER" : "쫜득이를 물리쳐라!"), canvas.width/2, canvas.height/2);
         } else {
-            if (score >= 1000000) { isGameCleared = true; }
-            let camX = player.x - canvas.width/2; let camY = player.y - canvas.height/2;
-            
-            let moveSpeed = 5;
-            player.isMoving = (keys['ArrowLeft'] || keys['KeyA'] || keys['ArrowRight'] || keys['KeyD'] || keys['ArrowUp'] || keys['KeyW'] || keys['ArrowDown'] || keys['KeyS']);
-            if (keys['ArrowLeft'] || keys['KeyA']) { player.x -= moveSpeed; player.dir = -1; }
-            if (keys['ArrowRight'] || keys['KeyD']) { player.x += moveSpeed; player.dir = 1; }
-            if (keys['ArrowUp'] || keys['KeyW']) player.y -= moveSpeed;
-            if (keys['ArrowDown'] || keys['KeyS']) player.y += moveSpeed;
+            // 이동
+            if (keys['ArrowLeft'] || keys['KeyA']) { player.x -= player.speed; player.dir = -1; }
+            if (keys['ArrowRight'] || keys['KeyD']) { player.x += player.speed; player.dir = 1; }
+            if (keys['ArrowUp'] || keys['KeyW']) player.y -= player.speed;
+            if (keys['ArrowDown'] || keys['KeyS']) player.y += player.speed;
 
-            player.frame += 0.1; ctx.save(); ctx.translate(canvas.width/2, canvas.height/2);
+            let camX = player.x - canvas.width/2, camY = player.y - canvas.height/2;
+
+            ctx.save(); ctx.translate(canvas.width/2, canvas.height/2);
             if (player.dir === -1) ctx.scale(-1, 1);
-            ctx.drawImage(player.isMoving ? playerWalks[Math.floor(player.frame) % 3] : playerIdle, -32, -32, 64, 64);
+            ctx.drawImage(player.isMoving ? playerWalks[Math.floor(player.frame += 0.1) % 3] : playerIdle, -32, -32, 64, 64);
             ctx.restore();
 
-            enemies.forEach((e, ei) => {
-                e.frame += 0.08;
+            enemies.forEach((e, i) => {
                 const angle = Math.atan2(player.y - e.y, player.x - e.x);
-                let speed = (e.type === 3) ? 0.3 : (e.type === 2 ? 0.7 : 1.2);
-                e.x += Math.cos(angle) * speed; e.y += Math.sin(angle) * speed;
-                let size = (e.type === 3) ? 128 : 64;
-                let img = (e.type === 3) ? bossWalks[Math.floor(e.frame)%3] : (e.type === 2 ? enemy2Walks[Math.floor(e.frame)%3] : enemy1Walks[Math.floor(e.frame)%3]);
-                ctx.drawImage(img, e.x - camX - size/2, e.y - camY - size/2, size, size);
-                if (e.type === 3) {
-                    ctx.fillStyle = 'red'; ctx.fillRect(e.x - camX - 50, e.y - camY - 80, 100, 10);
-                    ctx.fillStyle = 'lime'; ctx.fillRect(e.x - camX - 50, e.y - camY - 80, (e.hp / e.maxHp) * 100, 10);
-                }
-                if (Math.hypot(player.x - e.x, player.y - e.y) < size/2) { isGameOver = true; deathMessage = "당했다!"; }
-            });
-
-            bullets.forEach((b, bi) => {
-                b.x += b.dx; b.y += b.dy;
-                ctx.fillStyle = b.color; ctx.fillRect(b.x - camX, b.y - camY, b.size, b.size);
-                enemies.forEach((e, ei) => {
-                    if (Math.hypot(b.x - e.x, b.y - e.y) < (e.type === 3 ? 64 : 30)) {
-                        if (e.type === 3) { 
-                            e.hp -= b.damage; score += (b.damage * 2); 
-                            if (e.hp <= 0) { enemies.splice(ei, 1); score += 100000; } 
-                        } else { enemies.splice(ei, 1); score += (e.type === 2 ? 1000 : 500); }
-                        if (!b.pierce) bullets.splice(bi, 1);
+                e.x += Math.cos(angle) * (e.type === 4 ? 0.3 : 1.2); 
+                e.y += Math.sin(angle) * (e.type === 4 ? 0.3 : 1.2);
+                e.frame += 0.08;
+                if (Math.hypot(player.x - e.x, player.y - e.y) < (e.type === 4 ? 80 : 30)) isGameOver = true;
+                
+                let img = (e.type === 4) ? bossWalks[Math.floor(e.frame)%3] : (e.type === 3 ? bossWalks[Math.floor(e.frame)%3] : (e.type === 2 ? enemy2Walks[Math.floor(e.frame)%3] : enemy1Walks[Math.floor(e.frame)%3]));
+                ctx.drawImage(img, e.x - camX - 32, e.y - camY - 32, 64, 64);
+                
+                bullets.forEach((b, bi) => {
+                    if (Math.hypot(b.x - e.x, b.y - e.y) < 30) {
+                        e.hp -= b.damage; bullets.splice(bi, 1);
+                        if (e.hp <= 0) { if (e.type === 4) isGameCleared = true; enemies.splice(i, 1); score += 1000; player.exp += 500; checkLevelUp(); }
                     }
                 });
             });
-
-            ctx.fillStyle = 'white'; ctx.font = '20px Arial';
-            ctx.fillText("Score: " + score, 20, 30);
-            ctx.fillText("Lv: " + Math.min(Math.floor(score / 5000) + 1, 30), 20, 60);
+            bullets.forEach(b => { b.x += b.dx; b.y += b.dy; ctx.fillStyle = 'yellow'; ctx.fillRect(b.x - camX, b.y - camY, 10, 10); });
+            ctx.fillStyle = 'white'; ctx.font = '20px Arial'; ctx.textAlign = 'left';
+            ctx.fillText(`Score: ${score} | Level: ${player.level} | Bullet Speed: ${player.bulletSpeed}`, 50, 50);
         }
         requestAnimationFrame(update);
     }
